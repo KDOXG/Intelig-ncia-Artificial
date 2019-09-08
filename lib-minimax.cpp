@@ -1,24 +1,45 @@
 #include <iostream>
 #include <vector>
 #include <list>
-//#include <lib.h>  Colocar todas as funcoes e definicoes neste header
 #define cross 1
-#define circle 2
+#define circle -1
+#define byte unsigned char
 
-using namespace std;
+byte invertMinmax(byte m);
+byte JogoDaVelha(std::vector<byte> map);
 
 struct node
 {
-    vector<short> map;
-    short minmax;
-    list<node> nodes;
+    std::vector<byte> map;
+    byte minmax;
+    std::vector<node*> nodes;
 };
 
-short invertMinmax(short m);
-short JogoDaVelha(vector<short> map);
-void insertNode(node *no, vector<short> m, short n, short mm);
+class Minimax
+{
+    private:
+        void alocarNodos(node *no, byte altura);
+        void criarArvore(node *no, std::vector<byte> estadoAtual, byte n, byte minmax);
+        void valorMinMax(node *no, byte altura, byte minmax);
+        node head;
 
-short invertMinmax(short m)
+    public:
+        Minimax()
+        {
+            head.map = std::vector<byte>(9);
+            head.minmax = 2;
+            head.nodes = std::vector<node*>(9);
+        }
+        byte getMinmax()
+        {
+            return head.minmax;
+        }
+        void criarNodos(byte altura);
+        void gerarArvore(byte inicio);
+        void fatorMinMax(byte m);
+};
+
+byte invertMinmax(byte m)
 {
     if (m == cross)
         return circle;
@@ -26,94 +47,104 @@ short invertMinmax(short m)
         return cross;
 }
 
-short JogoDaVelha(vector<short> map, short m)
+byte JogoDaVelha(std::vector<byte> map)
 {
-    if (map[0] == map[1] == map[2])
+    if (map[0] == map[1] && map[0] == map[2] && map[0] != 0)
         return map[0];
-    if (map[3] == map[4] == map[5])
+    if (map[3] == map[4] && map[3] == map[5] && map[3] != 0)
         return map[3];
-    if (map[6] == map[7] == map[8])
+    if (map[6] == map[7] && map[6] == map[8] && map[6] != 0)
         return map[6];
-    if (map[0] == map[3] == map[6])
+    if (map[0] == map[3] && map[0] == map[6] && map[0] != 0)
         return map[0];
-    if (map[1] == map[4] == map[7])
+    if (map[1] == map[4] && map[1] == map[7] && map[1] != 0)
         return map[1];
-    if (map[2] == map[5] == map[8])
+    if (map[2] == map[5] && map[2] == map[8] && map[2] != 0)
         return map[2];
-    if (map[0] == map[4] == map[8])
+    if (map[0] == map[4] && map[0] == map[8] && map[0] != 0)
         return map[0];
-    if (map[3] == map[5] == map[7])
+    if (map[3] == map[5] && map[3] == map[7] && map[3] != 0)
         return map[3];
     return 0;
 }
 
-class Minimax
+void Minimax::alocarNodos(node *no, byte altura)
 {
-    private:
-        void insertNode(node *no, vector<short> m, short n, short mm);
-        node head;
-
-    public:
-        Minimax()
-        {
-            head.map = vector<short>(9);
-            head.minmax = 0;
-            head.nodes = list<node>();
-        }
-        short getMinmax()
-        {
-            return head.minmax;
-        }
-        void criarArvore();
-        void fatorMinMax();
-};
-
-void Minimax::criarArvore()
-{
-    insertNode(&head,head.map,9,cross);
-    //O que fazer aqui...?
+    no = new node;
+    for (byte i = 0; i < altura; i++)
+        alocarNodos(no->nodes[i], altura-1);
 }
 
-void insertNode(node *no, vector<short> m, short n, short mm)
-{//Preciso arrumar alguns erros de sintaxe; percorrer a arvore em pos ordem?
-//Ignorar o comentario acima. Parece que a logica funciona.
-    if (n == 0)
+void Minimax::criarNodos(byte n)
+{
+    for (byte i = 0; i < n && n < 9; i++)
+        alocarNodos(head.nodes[i],n-1);
+}
+
+void Minimax::criarArvore(node *no, std::vector<byte> estadoAtual, byte n, byte minmax)
+{
+    if (n != 0)
     {
-        no->minmax = JogoDaVelha(m);
+        byte j;
+        std::vector<byte> estadoProx(estadoAtual);
+        std::vector<byte> estadoAux(estadoAtual);
+        for (byte i = 0; i < n; i++)
+        {
+            for (j = 0; j < estadoAux.size(); j++)
+                if (estadoAux[j] == 0)
+                    break;
+            if (j == estadoAux.size())
+                break;
+            estadoAux[j] = minmax;
+            estadoProx[j] = minmax;
+            criarArvore(no->nodes[i],estadoProx,n-1,invertMinmax(minmax));
+            estadoProx = estadoAtual;
+        }
+    }
+    no->map = estadoAtual;
+    no->minmax = 2;
+}
+
+void Minimax::gerarArvore(byte inicio)
+{
+    for (byte i = 0; i < head.nodes.size(); i++)
+        criarArvore(head.nodes[i],head.map,head.nodes.size()-1,invertMinmax(inicio));
+}
+
+void Minimax::valorMinMax(node *no, byte altura, byte minmax)
+{
+    if (altura == 0)
+    {
+        no->minmax = JogoDaVelha(no->map);
+        return;
     }
     else
     {
-        short k;
-        vector<short> o(m);
-        vector<short> p(m);
-        list<node>::iterator i = no->nodes.begin();
-        for (short j = 0; j < n; i++, j++)
+        no->minmax = JogoDaVelha(no->map);
+        if (no->minmax != 0)
+            return;
+        for (byte i = 0; i < altura; i++)
         {
-            for (k = 0; k < p.size(); k++)
-                if (p[k] == 0)
-                    break;
-            if (k == p.size())
-                break;
-            p[k] = mm;
-            o[k] = mm;
-            insertNode(*i,o,n-1,invertMinmax(mm));
-            o = m;
+            valorMinMax(no->nodes[i],altura-1,invertMinmax(minmax));
+            if (no->nodes[i]->minmax == minmax || no->nodes[i]->minmax == 0)
+            {
+                no->minmax = no->nodes[i]->minmax;
+                return;
+            }
         }
-        no->minmax = mm;
     }
+    
 }
 
-void Minimax::fatorMinMax()
+void Minimax::fatorMinMax(byte m)
 {
-    //E aqui que o negocio fica divertido~
-    //Lembrete: o que define um no folha e no.nodes.size() ser 0
-}
-
-int main(int argc, char *argv[])
-{
-    Minimax TicTacToe();
-    TicTacToe.criarArvore();
-    TicTacToe.fatorMinmax();
-    cout << "Fator minimax do jogo da velha: " << TicTacToe.getMinmax();
-    return 0;
+    for (byte i = 0; i < head.nodes.size(); i++)
+    {
+        valorMinMax(head.nodes[i],9-1,invertMinmax(m));
+        if (head.nodes[i]->minmax == m)
+        {
+            head.minmax = m;
+            return;
+        }
+    }
 }
